@@ -10,7 +10,7 @@ minimize $d$ s.t. $ \sigma_i <= s$ for each $i$.
 
 where $\sigma_i = \sqrt \frac{(p_i (1 - p_i)}{d_i}$
 
-where $p_i = \frac{\Sigma_j c_ij*(t_i == 1)}{\Sigma_j c_ij}$
+where $p_i = \frac{\Sigma_j c_{ij}*(t_i == 1)}{\Sigma_j c_{ij}}$
 
 
 
