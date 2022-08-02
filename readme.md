@@ -4,13 +4,12 @@ Passively observed browsing data is a powerful tool for social science. Working 
 
 More generally, we want to solve the following optimization problem:
 
-Let i iterate over respondents 1 to n, let j iterate over domains that range from 1 to m, let c_ij denote number of visits by respondent i to domain j, t_j as trait of domain j with t being a boolean, and d denote the number of selected domains. For each respondent, we select $d_i$ domains. Formally,
+Let $i$ iterate over respondents 1 to $n$, let $j$ iterate over domains that range from 1 to m, let $c_{ij}$ denote number of visits by respondent $i$ to domain $j$, $t_j$ as trait of domain $j$ with $t$ being a boolean, and let $d$ denote the number of selected domains. For each respondent, we select $d_i$ domains. Formally,
 
 minimize $d$ s.t. $ \sigma_i <= s$ for each $i$.
 
 where $\sigma_i = \sqrt \frac{(p_i (1 - p_i)}{d_i}$
 
 where $p_i = \frac{\Sigma_j c_{ij}*(t_i == 1)}{\Sigma_j c_{ij}}$
-
 
 
