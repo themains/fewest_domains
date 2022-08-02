@@ -9,7 +9,7 @@ Let i iterate over respondents 1 to n, let j iterate over domains that range fro
 minimize d
 s.t. $\sigma_i <= s$ for each i
 
-for each respondent, we select d_i domains, hence the s.e. = 
+for each respondent, we select d_i domains, hence the s.e. = \\
 $\sigma_i = \sqrt \frac{(p_i (1 - p_i)}{d_i}$
 
 where $p_i = \frac{c_ij*(t_i == 1)}{\Sigma t_i}$
