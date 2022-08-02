@@ -12,4 +12,4 @@ where $\sigma_i = \sqrt \frac{(p_i (1 - p_i)}{d_i}$
 
 where $p_i = \frac{\Sigma_j c_{ij}*(t_i == 1)}{\Sigma_j c_{ij}}$
 
-
+d is the set of all $d_i$
