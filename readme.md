@@ -14,6 +14,8 @@ where $p_i = \frac{\Sigma_j c_{ij}*(t_{ij})}{\Sigma_j c_{ij}}$
 
 $d$ is the set of all the domains we select for each respondent.
 
+Since the state of each domain is unknown, we have to solve for the worst case scenario: $p_i = .5$. 
+
 ### Heuristics
 
 1. Strategy that *always* works from a s.e. perspective
