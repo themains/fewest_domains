@@ -1,9 +1,12 @@
 library(lpSolveAPI)
 
 # Define the parameters
-n <- 100  # Number of respondents
-m <- 200  # Number of domains
-epsilon <- 0.01  # Maximum standard error
+library(lpSolveAPI)
+
+# Define the parameters
+n <- 10  # Number of respondents
+m <- 2000  # Number of domains
+epsilon <- 20  # Maximum standard error
 
 # Generate fake data
 cij <- matrix(rpois(n * m, lambda = 10), ncol = m)  # Visitation matrix
@@ -16,14 +19,14 @@ set.type(lp_model, 1:m, "binary")
 
 # Add constraints for each respondent
 for (i in 1:n) {
-  constraint <- cij[i, ]
+  constraint <- cij[i, ] * tj
   add.constraint(lp_model, constraint, ">=", 1)
 }
 
 # Add constraint for standard error
 for (j in 1:m) {
   constraint <- matrix(0, nrow = 1, ncol = m)
-  constraint[1, j] <- sqrt(sum(cij[, j]))
+  constraint[1, j] <- sqrt(sum(cij[, j] * tj) / sum(tj))
   add.constraint(lp_model, constraint, "<=", epsilon)
 }
 
@@ -42,9 +45,16 @@ solution <- get.variables(lp_model)
 selected_domains <- lapply(1:n, function(i) which(solution[(i - 1) * m + 1:i * m] > 0))
 
 # Calculate the standard error for each respondent
-standard_error <- sapply(selected_domains, function(d) sqrt(sum(cij[, d])))
+standard_error <- sapply(selected_domains, function(d) {
+  if (length(d) > 0) {
+    sum(cij[, d] * tj) / sum(tj)
+  } else {
+    NaN
+  }
+})
 
 # Output the selected domains and standard error for each respondent
 for (i in 1:n) {
   cat("Respondent", i, ": Selected Domains =", selected_domains[[i]], "Standard Error =", standard_error[i], "\n")
 }
+
