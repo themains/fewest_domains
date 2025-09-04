@@ -1,93 +1,168 @@
 ## Cheap Precision: What're the Fewest Items You Can Select?
 
-Passively observed browsing data is a powerful tool for social science. Working with it means learning how to infer some characteristics of the URLs that people visit. Measurement of some of those characteristics is expensive and it is useful to think about the following question: what is the fewest number of domains (and identify which domains) you need to get inference on so that you can measure some person-level metric, e.g., the proportion of time spent on domains with adult content, can be answered with a standard error equal or less than some specified number. The setup has the following characteristics: large skew in visitation, a large overlap across people in sites that they commonly visit, and a large idiosyncratic tail per person with little overlap.
+Passively observed browsing data is a powerful tool for social science. Working with it means learning how to infer some characteristics of the URLs that people visit. Measurement of some of those characteristics is expensive and it is useful to think about the following question: what is the fewest number of domains (and identify which domains) you need to get inference on so that you can measure some person-level metric, e.g., the proportion of time spent on domains with adult content, can be answered with a standard error equal or less than some specified number.
 
-More generally, we want to solve the following optimization problem:
+### The Estimand
 
-Let $i$ iterate over respondents 1 to $n$, let $j$ iterate over domains that range from 1 to m, let $c_{ij}$ denote the number of visits by respondent $i$ to domain $j$, let $t_j$ denote an unmeasured trait of domain $j$, with $t$ being a boolean, let $d_i$ denote the total number of selected domains for respondent $i$, and $D_i$ as the list of domains selected, and $D$ as the set of all domains selected across respondents.
+**What we want to estimate**: For each respondent $i$, we want to estimate the proportion of their browsing time spent on domains with some characteristic (e.g., adult content):
 
-minimize $d$ s.t. $ \sigma_i <= s$ for each $i$ where $s$ is some constant.
+$$\hat{p}_i = \frac{\sum_{j \in D_i} c_{ij} \cdot t_j}{\sum_{j \in D_i} c_{ij}}$$
 
-$\sigma_i = \sqrt \frac{(p_i (1 - p_i))}{d_i}$
+where:
+- $c_{ij}$ = observed visits by respondent $i$ to domain $j$
+- $t_j$ = unobserved binary trait of domain $j$ (1 if has characteristic, 0 otherwise)
+- $D_i$ = set of domains selected for manual coding for respondent $i$
 
-where $p_i = \frac{\Sigma_j c_{ij}*(t_{ij})}{\Sigma_j c_{ij}}$
+**The precision requirement**: We need the standard error of $\hat{p}_i$ to be ≤ some target value $s$ for every respondent.
 
-Since the latent trait, $t_j$ of each domain is unknown, we have to solve for the worst-case scenario: $p_i = .5$. This leaves the two unknowns as $d_i$ and $D_i$, which jointly tell us about the quantities of interest $d$ and $D$. Technically, $d$ is an attribute of $D$ and hence needn't be seen as a separate unknown. We assume that the only way to get to $d$ is to find $D$.
+**The cost constraint**: Manual coding of domains is expensive, so we want to minimize the total number of unique domains that need to be manually classified across all respondents.
 
-### Solution
+### Problem Setup
 
-This repository provides two approaches to solve the domain selection optimization problem:
+The setup has the following characteristics:
+- **Large skew in visitation**: A few domains are visited by basically everyone  
+- **Large overlap across people**: Common sites that most people visit
+- **Large idiosyncratic tail per person**: Each person has unique low-frequency domains with little overlap
 
-#### **Naive Method** (Baseline)
-Per-respondent weighted random sampling where each respondent gets their own set of domains proportional to their visit frequency. 
+### Optimization Problem Formulation
 
-#### **Optimal Method** 
-Shared domain selection that leverages the skewed browsing patterns to minimize total domains across all respondents while meeting standard error constraints.
+**Objective**: Minimize the total number of domains requiring manual classification
 
-Both methods are implemented with rigorous validation in `scripts/corrected_methods.R`.
+**Constraint**: Maintain statistical precision for every respondent
+
+Formally, we solve:
+
+$$\min |D| \quad \text{subject to} \quad \text{SE}(\hat{p}_i) \leq s \quad \forall i$$
+
+where:
+- $D = \bigcup_{i=1}^n D_i$ is the set of all domains selected across respondents
+- $s$ is the target standard error threshold
+- $\text{SE}(\hat{p}_i)$ is the standard error of the proportion estimate for respondent $i$
+
+**Standard Error Formula**: For frequency-weighted sampling, the standard error of the proportion estimate is:
+
+$$\text{SE}(\hat{p}_i) = \sqrt{\frac{p_i(1-p_i)}{\text{eff\_sample}_i}}$$
+
+where $\text{eff\_sample}_i$ is the effective sample size based on the selected domains.
+
+**Worst-case assumption**: Since the true proportion $p_i$ is unknown, we use the conservative worst-case scenario $p_i = 0.5$, which maximizes the standard error. This gives:
+
+$$\text{SE}(\hat{p}_i) = \sqrt{\frac{0.25}{\text{eff\_sample}_i}} = \frac{0.5}{\sqrt{\text{eff\_sample}_i}}$$
+
+**Effective Sample Size**: For respondent $i$ with selected domains $D_i$:
+
+$$\text{eff\_sample}_i = \text{coverage}_i \times |D_i|$$
+
+where $\text{coverage}_i = \frac{\sum_{j \in D_i} c_{ij}}{\sum_{j=1}^m c_{ij}}$ is the proportion of respondent $i$'s browsing captured by the selected domains.
+
+**The constraint**: For the constraint $\text{SE}(\hat{p}_i) \leq s$ to be satisfied, we need:
+
+$$\frac{0.5}{\sqrt{\text{eff\_sample}_i}} \leq s$$
+
+Rearranging: $\text{eff\_sample}_i \geq \frac{0.25}{s^2}$
+
+This gives us the minimum effective sample size required per respondent to achieve the target standard error.
+
+## Solution
+
+### Methods
+
+**Naive Method (Baseline):** Per-respondent weighted random sampling where each respondent gets their own set of domains proportional to their visit frequency.
+
+**Optimal Method:** Shared domain selection that leverages the skewed browsing patterns to minimize total domains across all respondents while meeting standard error constraints.
 
 ### Implementation
 
-The solution consists of modular R scripts:
+The solution consists of **5 core R scripts**:
 
-**Core Production Scripts:**
-- `scripts/data_generation.R` - Generates realistic heavy-skewed browsing data with characteristics matching real web usage patterns
-- `scripts/corrected_methods.R` - Implements both naive and optimal methods with rigorous constraint validation
-- `scripts/validation.R` - Comprehensive constraint verification framework ensuring solutions actually meet SE requirements  
-- `scripts/final_comparison.R` - Complete validated comparison framework and sensitivity analysis
+- **[`scripts/main.R`](scripts/main.R)** - Main entry point with demo
+- **[`scripts/data_generation.R`](scripts/data_generation.R)** - Generates realistic heavy-skewed browsing data  
+- **[`scripts/corrected_methods.R`](scripts/corrected_methods.R)** - Both naive and optimal methods with rigorous validation
+- **[`scripts/validation.R`](scripts/validation.R)** - Constraint verification framework
+- **[`scripts/robust_evaluation.R`](scripts/robust_evaluation.R)** - Comprehensive testing across multiple scenarios
 
-**Research/Alternative Approaches:**
-- `scripts/optimal_solution.R` - Integer Linear Programming approach using lpSolveAPI for exact optimization
-- `scripts/heuristic_solution.R` - Pure R greedy implementation without external dependencies
+### Robust Results
 
-### Key Results
+**Tested across 40 scenarios** (4 data variants × 10 random seeds):
 
-**✓ All results are validated to ensure standard error constraints are actually met**
+| Method | Domains Required | Improvement | Success Rate |
+|--------|------------------|-------------|--------------|
+| **Optimal** | **30.3 ± 3.7** | **78.6% ± 4.1%** | **100%** |
+| Naive | 145.6 ± 29.2 | - | 100% |
 
-Testing on realistic browsing data with heavy skew (top 10 domains capture ~90% of visits) and high overlap (80%+ of users visit popular domains):
+**Key Findings:**
+- **Statistically significant**: 95% CI = 77.3% to 79.9% improvement
+- **Always successful**: 100% constraint satisfaction across all scenarios  
+- **Remarkably consistent**: Works across diverse data generating processes
+- **Massive cost savings**: 71-85% reduction in domains requiring manual classification
 
-| Standard Error Target | Naive Domains | Optimal Domains | Improvement | Constraints Met |
-|----------------------|---------------|-----------------|-------------|-----------------|
-| 0.05                 | 250           | 102             | **59.2%** reduction | ✓ Both methods |
-| 0.10                 | 141           | 28              | **80.1%** reduction | ✓ Both methods |  
-| 0.15                 | 35            | 14              | **60.0%** reduction | ✓ Both methods |
-| 0.20                 | 18            | 8               | **55.6%** reduction | ✓ Both methods |
+### Performance by Data Type
 
-The validated optimal method dramatically outperforms the naive approach by:
-- **Reducing coding costs by 55-80%** (fewer domains to manually classify)
-- **Guaranteeing 100% constraint satisfaction** for both methods through rigorous validation
-- **Leveraging shared popular domains** that help multiple respondents simultaneously
-- **Meeting strict SE requirements** with mathematical verification
+| Scenario | Optimal Domains | Improvement |
+|----------|-----------------|-------------|
+| **Standard Skew** | 27.7 | 74.1% |
+| **Extreme Skew** | 28.9 | 83.8% |  
+| **Moderate Skew** | 36.5 | 75.7% |
+| **High Overlap** | 28.0 | 80.8% |
 
-### Usage
+## Usage
 
+### Quick Demo
 ```r
-# Run complete validated comparison (RECOMMENDED)
-source("scripts/final_comparison.R")
+# Run main demo
+source("scripts/main.R")
+```
 
-# Or run individual methods
+### Custom Analysis
+```r
+# Load the methods
 source("scripts/corrected_methods.R")
-data <- generate_realistic_browsing_data(n_respondents = 25, n_domains = 400)
 
-# Run both methods with validation
+# Generate data (see data_generation.R for details)
+data <- generate_realistic_browsing_data(n_respondents = 20, n_domains = 200)
+
+# Run both methods (see corrected_methods.R for implementation)
 naive_result <- naive_corrected(data$cij, target_se = 0.1)
 optimal_result <- optimal_corrected(data$cij, target_se = 0.1)
 
-# Verify constraints are met
-print(paste("Naive constraints satisfied:", naive_result$constraints_satisfied))
-print(paste("Optimal constraints satisfied:", optimal_result$constraints_satisfied))
-print(paste("Domains saved:", naive_result$total_unique_domains - optimal_result$total_unique_domains))
+# Compare results
+domains_saved <- naive_result$total_unique_domains - optimal_result$total_unique_domains
+improvement <- 100 * domains_saved / naive_result$total_unique_domains
+
+cat("Domains saved:", domains_saved, "(", round(improvement, 1), "% improvement)\n")
+cat("Constraints satisfied:", optimal_result$constraints_satisfied, "\n")
 ```
 
-### Validation
+### Comprehensive Testing
+```r
+# Run robust evaluation (40 test scenarios)
+# See robust_evaluation.R for full implementation details
+source("scripts/robust_evaluation.R")
+```
 
-The solution includes rigorous constraint validation:
-- **`scripts/validation.R`** - Comprehensive validation framework with synthetic data testing
-- **`scripts/final_comparison.R`** - Validated comparison ensuring all constraints are met
-- **All reported results** are mathematically verified to satisfy SE ≤ target for every respondent
-- **Research scripts** provide alternative approaches (ILP solver, pure R heuristic) for comparison
+## Validation
 
-### References
+**All results are mathematically verified** (see [`scripts/validation.R`](scripts/validation.R)):
+- Every solution is validated to ensure SE ≤ target for every respondent
+- Comprehensive testing across multiple data generating processes  
+- Statistical significance confirmed with 95% confidence intervals
+- 100% success rate across all tested scenarios
+
+The validation framework in [`validation.R`](scripts/validation.R) implements rigorous constraint verification by:
+1. Computing actual standard errors for each respondent given their selected domains
+2. Checking that all respondents meet the SE ≤ target requirement
+3. Providing detailed diagnostics when constraints are violated
+4. Testing with synthetic data where ground truth is known
+
+## Key Innovation
+
+The optimal method achieves dramatic cost savings by **leveraging the natural structure** of web browsing data:
+- **Exploits heavy skew**: Most visits concentrate on few popular domains
+- **Utilizes shared patterns**: Popular domains help multiple respondents simultaneously  
+- **Maintains precision**: Mathematical guarantees that all respondents meet SE requirements
+- **Scales efficiently**: Performance improves with more extreme (realistic) data patterns
+
+## References
 
 Original feasible solution: https://github.com/soodoku/weighted_selection/blob/main/scripts/feasible.R
 
