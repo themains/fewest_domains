@@ -19,19 +19,26 @@ Since the latent trait, $t_j$ of each domain is unknown, we have to solve for th
 This repository provides two approaches to solve the domain selection optimization problem:
 
 #### **Naive Method** (Baseline)
-Per-respondent weighted random sampling where each respondent gets their own set of domains proportional to their visit frequency. Located in `scripts/naive_method.R`.
+Per-respondent weighted random sampling where each respondent gets their own set of domains proportional to their visit frequency. 
 
 #### **Optimal Method** 
-Shared domain selection that leverages the skewed browsing patterns to minimize total domains across all respondents while meeting standard error constraints. Located in `scripts/optimal_method.R`.
+Shared domain selection that leverages the skewed browsing patterns to minimize total domains across all respondents while meeting standard error constraints.
+
+Both methods are implemented with rigorous validation in `scripts/corrected_methods.R`.
 
 ### Implementation
 
 The solution consists of modular R scripts:
 
+**Core Production Scripts:**
 - `scripts/data_generation.R` - Generates realistic heavy-skewed browsing data with characteristics matching real web usage patterns
-- `scripts/naive_method.R` - Implements per-respondent weighted sampling baseline  
-- `scripts/optimal_method.R` - Implements shared domain selection optimization
-- `scripts/compare_methods.R` - Complete comparison framework and sensitivity analysis
+- `scripts/corrected_methods.R` - Implements both naive and optimal methods with rigorous constraint validation
+- `scripts/validation.R` - Comprehensive constraint verification framework ensuring solutions actually meet SE requirements  
+- `scripts/final_comparison.R` - Complete validated comparison framework and sensitivity analysis
+
+**Research/Alternative Approaches:**
+- `scripts/optimal_solution.R` - Integer Linear Programming approach using lpSolveAPI for exact optimization
+- `scripts/heuristic_solution.R` - Pure R greedy implementation without external dependencies
 
 ### Key Results
 
@@ -55,26 +62,30 @@ The validated optimal method dramatically outperforms the naive approach by:
 ### Usage
 
 ```r
-# Run validated comparison (RECOMMENDED)
+# Run complete validated comparison (RECOMMENDED)
 source("scripts/final_comparison.R")
 
-# Or run individual corrected methods
+# Or run individual methods
 source("scripts/corrected_methods.R")
 data <- generate_realistic_browsing_data(n_respondents = 25, n_domains = 400)
 
-# Validated optimal method
-result <- optimal_corrected(data$cij, target_se = 0.1)
+# Run both methods with validation
+naive_result <- naive_corrected(data$cij, target_se = 0.1)
+optimal_result <- optimal_corrected(data$cij, target_se = 0.1)
 
-# Check constraints are met
-print(result$constraints_satisfied)  # Should be TRUE
+# Verify constraints are met
+print(paste("Naive constraints satisfied:", naive_result$constraints_satisfied))
+print(paste("Optimal constraints satisfied:", optimal_result$constraints_satisfied))
+print(paste("Domains saved:", naive_result$total_unique_domains - optimal_result$total_unique_domains))
 ```
 
 ### Validation
 
 The solution includes rigorous constraint validation:
-- `scripts/validation.R` - Comprehensive validation framework
-- `scripts/final_comparison.R` - Validated comparison ensuring all constraints are met
-- All reported results are **mathematically verified** to satisfy SE ≤ target for every respondent
+- **`scripts/validation.R`** - Comprehensive validation framework with synthetic data testing
+- **`scripts/final_comparison.R`** - Validated comparison ensuring all constraints are met
+- **All reported results** are mathematically verified to satisfy SE ≤ target for every respondent
+- **Research scripts** provide alternative approaches (ILP solver, pure R heuristic) for comparison
 
 ### References
 
